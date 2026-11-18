@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TokenSphere 3D - Semantic Space & Tokenizer</title>
+  
+  <!-- Three.js and OrbitControls via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================================================
+       TokenSphere: 60-30-10 Pastel & Pale Architecture
+       60% Dominant: Pale Porcelain Canvas (#f6f8fb, #eef2f7)
+       30% Secondary: Pure White Cards & Dark Slate Type (#ffffff, #1e293b, #475569)
+       10% Accent: Pastel Periwinkle (#6366f1, #818cf8), Pastel Lilac (#a855f7), Rose (#f472b6)
+       ========================================================= */
+    :root {
+      --bg-main: #f6f8fb;
+      --bg-viewport: #eef2f7;
+      --surface-sidebar: #ffffff;
+      --surface-card: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.94);
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      
+      --text-heading: #0f172a;
+      --text-body: #334155;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      
+      --accent-periwinkle: #818cf8;
+      --accent-periwinkle-light: #e0e7ff;
+      --accent-periwinkle-deep: #6366f1;
+      
+      --accent-lilac: #c084fc;
+      --accent-lilac-light: #f3e8ff;
+      --accent-lilac-deep: #a855f7;
+      
+      --accent-rose: #f472b6;
+      --accent-rose-light: #fce7f3;
+      --accent-rose-deep: #db2777;
+      
+      --accent-mint: #10b981;
+      --accent-mint-light: #d1fae5;
+      --accent-amber: #f59e0b;
+      --accent-amber-light: #fef3c7;
+      
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+      
+      --shadow-soft: 0 4px 20px -2px rgba(100, 116, 139, 0.08);
+      --shadow-hover: 0 10px 25px -4px rgba(99, 102, 241, 0.12);
+      --glass-blur: blur(16px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-body);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout Structure: Sidebar + Main 3D Viewport */
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: All Controls & Tokenizer */
+    .sidebar {
+      width: 450px;
+      min-width: 410px;
+      max-width: 480px;
+      background: var(--surface-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      box-shadow: 4px 0 24px rgba(100, 116, 139, 0.08);
+    }
+
+    .app-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: #ffffff;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      font-size: 26px;
+      background: var(--accent-periwinkle-light);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 12px rgba(129, 140, 248, 0.18);
+    }
+
+    .logo-text h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--text-heading);
+    }
+
+    .logo-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 600;
+    }
+
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: var(--bg-main);
+    }
+
+    .scroll-area::-webkit-scrollbar { width: 6px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* Content Cards */
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-soft);
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .card-accent {
+      background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+      border-color: #e9d5ff;
+    }
+    .card-accent:hover {
+      border-color: var(--accent-lilac);
+      box-shadow: 0 8px 24px rgba(192, 132, 252, 0.18);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent-periwinkle-light);
+      color: var(--accent-periwinkle-deep);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+      border: 1px solid rgba(129, 140, 248, 0.3);
+    }
+
+    .card-accent .step-badge {
+      background: var(--accent-lilac-light);
+      color: var(--accent-lilac-deep);
+      border-color: rgba(192, 132, 252, 0.4);
+    }
+
+    .card-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .section-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Presets */
+    .corpus-presets {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .corpus-presets label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .preset-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-preset {
+      flex: 1;
+      background: #f1f5f9;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-body);
+      padding: 7px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-preset:hover { background: #e2e8f0; color: var(--text-heading); }
+    .btn-preset.active {
+      background: var(--accent-periwinkle-light);
+      border-color: var(--accent-periwinkle);
+      color: var(--accent-periwinkle-deep);
+      font-weight: 700;
+    }
+
+    /* Form Fields */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-heading);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .form-row { display: flex; gap: 12px; }
+    .form-group.half { flex: 1; }
+
+    textarea, input[type="text"], select {
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      color: var(--text-heading);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus, select:focus {
+      background: #ffffff;
+      border-color: var(--accent-periwinkle);
+      box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 14px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 85px;
+      line-height: 1.45;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    /* Toggles */
+    .tokenizer-options {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-body);
+    }
+
+    .toggle-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .toggle-control input { display: none; }
+
+    .toggle-slider {
+      width: 32px;
+      height: 18px;
+      background: #cbd5e1;
+      border-radius: var(--radius-full);
+      position: relative;
+      transition: 0.2s;
+    }
+
+    .toggle-slider::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      transition: 0.2s;
+    }
+
+    .toggle-control input:checked + .toggle-slider { background: var(--accent-periwinkle); }
+    .toggle-control input:checked + .toggle-slider::after { transform: translateX(14px); }
+
+    /* Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-periwinkle-deep);
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+      cursor: pointer;
+    }
+
+    .card-accent input[type="range"]::-webkit-slider-thumb {
+      background: var(--accent-lilac-deep);
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+    }
+
+    .value-highlight {
+      color: var(--accent-lilac-deep);
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .similarity-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .meter-bar {
+      width: 100%;
+      height: 6px;
+      background: #f1f5f9;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #93c5fd, #c084fc, #f472b6);
+      transition: width 0.2s;
+    }
+
+    .meter-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-faint);
+      font-weight: 500;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: var(--text-heading);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-secondary:hover { background: #e2e8f0; color: #000; }
+
+    .btn-accent {
+      background: linear-gradient(135deg, #a855f7, #c084fc);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
+    }
+    .btn-accent:hover {
+      background: linear-gradient(135deg, #9333ea, #a855f7);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .stat-item {
+      background: #f8fafc;
+      padding: 10px 8px;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-periwinkle-deep);
+      font-family: var(--font-mono);
+    }
+
+    /* Encode Results */
+    .encode-results {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .result-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 6px;
+    }
+
+    .token-pills-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .token-pill {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--accent-periwinkle-light);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 4px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .token-pill:hover { background: #c7d2fe; transform: translateY(-2px); }
+    .token-pill.oov { background: #fee2e2; border-color: #fca5a5; }
+    .token-pill.oov .token-id { color: #ef4444; }
+
+    .token-str { font-weight: 700; color: var(--text-heading); }
+    .token-id { font-family: var(--font-mono); font-size: 10px; color: var(--accent-periwinkle-deep); font-weight: 600; }
+
+    .code-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-periwinkle-deep);
+      word-break: break-all;
+      max-height: 80px;
+      overflow-y: auto;
+      font-weight: 600;
+    }
+
+    /* ================= Main 3D Viewport ================= */
+    .main-viewport {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg-viewport);
+    }
+
+    .canvas-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at center, #ffffff 0%, #eef2f7 100%);
+      overflow: hidden;
+    }
+
+    .canvas-container canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    /* Floating HUDs */
+    .hud-top {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hud-title-box {
+      background: var(--surface-glass);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-mint);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .hud-title {
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--text-heading);
+      display: block;
+    }
+
+    .hud-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .viewport-tools {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .hud-btn {
+      background: var(--surface-glass);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      color: var(--text-body);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hud-btn:hover {
+      background: #ffffff;
+      color: var(--text-heading);
+      border-color: var(--accent-periwinkle-deep);
+    }
+
+    .hud-btn.active {
+      background: var(--accent-periwinkle-light);
+      border-color: var(--accent-periwinkle-deep);
+      color: var(--accent-periwinkle-deep);
+    }
+
+    /* Threshold HUD (Bottom Left) */
+    .hud-bottom-left {
+      position: absolute;
+      bottom: 58px;
+      left: 20px;
+      z-index: 10;
+    }
+
+    .sim-threshold-card {
+      background: var(--surface-glass);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      width: 260px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .threshold-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-heading);
+    }
+
+    .threshold-badge {
+      background: var(--accent-periwinkle-light);
+      color: var(--accent-periwinkle-deep);
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .threshold-help {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Legend (Bottom Right) */
+    .hud-bottom-right {
+      position: absolute;
+      bottom: 58px;
+      right: 20px;
+      z-index: 10;
+    }
+
+    .legend-card {
+      background: var(--surface-glass);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11.5px;
+      color: var(--text-body);
+      font-weight: 600;
+    }
+
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot-corpus { background: #6366f1; box-shadow: 0 0 6px rgba(99, 102, 241, 0.6); }
+    .dot-custom { background: #ec4899; box-shadow: 0 0 6px rgba(236, 72, 153, 0.6); }
+    .dot-selected { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
+    .legend-line { width: 16px; height: 2px; background: #6366f1; border-radius: 1px; }
+
+    /* Word Inspector Card */
+    .inspector-card {
+      position: absolute;
+      top: 86px;
+      right: 20px;
+      width: 310px;
+      background: var(--surface-glass);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(203, 213, 225, 0.95);
+      box-shadow: 0 16px 36px rgba(100, 116, 139, 0.16);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      z-index: 15;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: none;
+      border: none;
+      color: var(--text-faint);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .close-btn:hover { color: var(--text-heading); }
+
+    .token-type-pill {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-periwinkle-light);
+      color: var(--accent-periwinkle-deep);
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .inspector-header h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-heading);
+      word-break: break-all;
+    }
+
+    .insp-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .inspector-meta {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      font-size: 11.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .insp-meta-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+    .insp-meta-row strong { color: var(--text-heading); }
+    .insp-meta-row code { font-family: var(--font-mono); color: var(--accent-lilac-deep); font-weight: 600; }
+
+    .similar-list-box h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .similar-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .similar-tag-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .similar-tag-item:hover {
+      background: var(--accent-periwinkle-light);
+      border-color: var(--accent-periwinkle-deep);
+    }
+
+    .similar-tag-word { font-weight: 700; color: var(--text-heading); }
+    .similar-tag-score { font-family: var(--font-mono); font-size: 10.5px; color: #059669; font-weight: 700; }
+
+    /* Tooltip */
+    .tooltip-3d {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      z-index: 50;
+      transform: translate(-50%, -120%);
+      transition: opacity 0.1s ease;
+      white-space: nowrap;
+    }
+
+    /* ================= Bottom Drawer: Table ================= */
+    .bottom-drawer {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: var(--glass-blur);
+      border-top: 1px solid var(--border-subtle);
+      box-shadow: 0 -8px 24px rgba(100, 116, 139, 0.08);
+      z-index: 25;
+      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      max-height: 380px;
+    }
+
+    .bottom-drawer.collapsed { max-height: 44px; }
+
+    .drawer-header {
+      height: 44px;
+      min-height: 44px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-subtle);
+      user-select: none;
+    }
+
+    .drawer-header:hover { background: #f1f5f9; }
+
+    .drawer-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-heading);
+      font-weight: 700;
+    }
+
+    .drawer-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-weight: normal;
+    }
+
+    .drawer-arrow-btn {
+      background: none;
+      border: none;
+      color: var(--accent-periwinkle-deep);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .drawer-content {
+      padding: 14px 24px 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      height: calc(380px - 44px);
+      background: #ffffff;
+    }
+
+    .table-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .search-input {
+      max-width: 280px;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+
+    .quick-info {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .table-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: #ffffff;
+    }
+
+    .table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    .vocab-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .vocab-table th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      color: var(--text-heading);
+      font-weight: 700;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 2;
+    }
+
+    .vocab-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-body);
+    }
+
+    .vocab-table tbody tr { cursor: pointer; transition: background 0.15s; }
+    .vocab-table tbody tr:hover { background: #f1f5f9; }
+    .vocab-table tbody tr.active-row {
+      background: var(--accent-periwinkle-light);
+      border-left: 3px solid var(--accent-periwinkle-deep);
+    }
+
+    .empty-state { text-align: center; color: var(--text-muted); padding: 30px !important; }
+
+    .token-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-periwinkle-deep);
+      font-weight: 700;
+    }
+
+    .source-badge {
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+    }
+    .source-corpus {
+      background: var(--accent-periwinkle-light);
+      color: var(--accent-periwinkle-deep);
+    }
+    .source-custom {
+      background: var(--accent-rose-light);
+      color: #db2777;
+    }
+
+    .action-btn-sm {
+      background: #f1f5f9;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-heading);
+      padding: 4px 9px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .action-btn-sm:hover {
+      background: var(--accent-periwinkle-deep);
+      color: #ffffff;
+      border-color: var(--accent-periwinkle-deep);
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1024px) {
+      .app-layout { flex-direction: column; }
+      .sidebar { width: 100%; min-width: 100%; max-width: 100%; height: 48vh; }
+      .main-viewport { height: 52vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Left Sidebar: All Inputs, Tokenizer & Add Word Controls -->
+    <aside class="sidebar">
+      <header class="app-header">
+        <div class="logo">
+          <div class="logo-icon">🪐</div>
+          <div class="logo-text">
+            <h1>TokenSphere 3D</h1>
+            <p>Interactive Tokenizer & Embedding Space</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="scroll-area">
+        <!-- Feature 1: Tokenizer & Corpus Learning -->
+        <section class="card">
+          <div class="card-header">
+            <span class="step-badge">1</span>
+            <h2>Train & Build Vocabulary</h2>
+          </div>
+          <p class="section-desc">Provide raw text for the tokenizer to learn tokens, build vocabulary, and map co-occurrence semantics.</p>
+          
+          <div class="corpus-presets">
+            <label>Load Preset:</label>
+            <div class="preset-buttons">
+              <button type="button" class="btn-preset active" data-preset="ai">AI & Tech</button>
+              <button type="button" class="btn-preset" data-preset="space">Astronomy</button>
+              <button type="button" class="btn-preset" data-preset="animals">Nature</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="corpusInput">Training Corpus:</label>
+            <textarea id="corpusInput" rows="5" placeholder="Enter corpus text to learn tokens from..."></textarea>
+          </div>
+
+          <div class="tokenizer-options">
+            <label class="toggle-control">
+              <input type="checkbox" id="lowercaseToggle" checked>
+              <span class="toggle-slider"></span>
+              <span>Normalize Lowercase</span>
+            </label>
+            <label class="toggle-control">
+              <input type="checkbox" id="punctToggle" checked>
+              <span class="toggle-slider"></span>
+              <span>Strip Punctuation</span>
+            </label>
+          </div>
+
+          <button id="btnBuildVocab" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+            Build Vocabulary
+          </button>
+
+          <div id="vocabStats" class="stats-grid hidden">
+            <div class="stat-item">
+              <span class="stat-label">Unique Tokens</span>
+              <span class="stat-value" id="statVocabSize">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Tokens</span>
+              <span class="stat-value" id="statTotalTokens">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">3D Embeddings</span>
+              <span class="stat-value" id="statNodesPlotted">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Feature 1.2: Encode Sentence -->
+        <section class="card">
+          <div class="card-header">
+            <span class="step-badge">2</span>
+            <h2>Encode Sentence</h2>
+          </div>
+          <p class="section-desc">Encode any query sentence into token sequence IDs based on the learned vocabulary.</p>
+
+          <div class="form-group">
+            <label for="sentenceInput">Target Sentence:</label>
+            <input type="text" id="sentenceInput" placeholder="e.g. artificial intelligence and deep learning" value="artificial intelligence and deep learning">
+          </div>
+
+          <button id="btnEncodeSentence" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            Encode the Sentence
+          </button>
+
+          <div id="encodeResults" class="encode-results hidden">
+            <div>
+              <div class="result-title">Tokenized Sequence & IDs:</div>
+              <div id="tokenPillsContainer" class="token-pills-wrap"></div>
+            </div>
+            <div>
+              <div class="result-title">Raw Vector Sequence:</div>
+              <div id="vectorOutput" class="code-box">[ ]</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Feature 3: Add New Word with Target Similarity -->
+        <section class="card card-accent">
+          <div class="card-header">
+            <span class="step-badge">3</span>
+            <h2>Add Word with Same Similarity</h2>
+          </div>
+          <p class="section-desc">Insert a new unseen word directly into 3D space by calculating coordinates relative to an existing anchor word with chosen similarity.</p>
+
+          <div class="form-group">
+            <label for="newWordInput">New Word to Add:</label>
+            <input type="text" id="newWordInput" placeholder="e.g. quantum or robot">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="anchorWordSelect">Anchor Word:</label>
+              <select id="anchorWordSelect">
+                <option value="">(Build vocab first)</option>
+              </select>
+            </div>
+            <div class="form-group half">
+              <label for="similarityInput">
+                Target Similarity: 
+                <span id="simValDisplay" class="value-highlight">0.85</span>
+              </label>
+              <input type="range" id="similarityInput" min="0.10" max="0.99" step="0.01" value="0.85">
+            </div>
+          </div>
+
+          <div class="similarity-preview">
+            <div class="meter-bar">
+              <div id="meterFill" class="meter-fill" style="width: 85%;"></div>
+            </div>
+            <div class="meter-labels">
+              <span>Distantly Related (0.2)</span>
+              <span>Related (0.6)</span>
+              <span>Synonym/Close (0.95)</span>
+            </div>
+          </div>
+
+          <button id="btnAddWord" class="btn btn-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Add New Word to 3D Space
+          </button>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Main Content Area: High-Visibility 3D Canvas & Visualizer -->
+    <main class="main-viewport">
+      <div id="canvasContainer" class="canvas-container">
+        <!-- Floating HUD Overlays -->
+        <div class="hud-top">
+          <div class="hud-title-box">
+            <span class="live-dot"></span>
+            <div>
+              <span class="hud-title">3D Semantic Similarity Space</span>
+              <div class="hud-subtitle">Spatial proximity denotes high cosine similarity &bull; Small word nodes</div>
+            </div>
+          </div>
+
+          <div class="viewport-tools">
+            <button id="btnToggleGrid" class="hud-btn active" title="Toggle 3D Grid">
+              <span>📐</span> 3D Grid
+            </button>
+            <button id="btnAutoRotate" class="hud-btn active" title="Toggle Auto-Rotation">
+              <span>🔄</span> Auto Rotate
+            </button>
+            <button id="btnToggleLabels" class="hud-btn active" title="Toggle Word Labels">
+              <span>🏷️</span> Labels
+            </button>
+            <button id="btnToggleLinks" class="hud-btn active" title="Toggle Similarity Lines">
+              <span>🕸️</span> Similarity Links
+            </button>
+            <button id="btnResetCamera" class="hud-btn" title="Reset Viewpoint">
+              <span>🎯</span> Center View
+            </button>
+          </div>
+        </div>
+
+        <!-- Similarity Threshold Slider HUD -->
+        <div class="hud-bottom-left">
+          <div class="sim-threshold-card">
+            <div class="threshold-header">
+              <span>Connection Threshold</span>
+              <span id="threshVal" class="threshold-badge">&ge; 0.50</span>
+            </div>
+            <input type="range" id="threshSlider" min="0.1" max="0.95" step="0.05" value="0.50">
+            <div class="threshold-help">Draws prominent 3D chords between words having cosine similarity &ge; threshold</div>
+          </div>
+        </div>
+
+        <!-- Selected Word Inspector Overlay -->
+        <div id="inspectorPanel" class="inspector-card hidden">
+          <button id="btnCloseInspector" class="close-btn">&times;</button>
+          <div class="inspector-header">
+            <span class="token-type-pill" id="inspType">VOCAB TOKEN</span>
+            <h3 id="inspWord">word</h3>
+            <span class="insp-id" id="inspId">ID: #0</span>
+          </div>
+          <div class="inspector-meta">
+            <div class="insp-meta-row">
+              <span>Frequency:</span>
+              <strong id="inspFreq">1</strong>
+            </div>
+            <div class="insp-meta-row">
+              <span>3D Coordinates:</span>
+              <code id="inspCoords">(0, 0, 0)</code>
+            </div>
+          </div>
+          <div class="similar-list-box">
+            <h4>Closest Semantic Neighbors:</h4>
+            <div id="inspSimilarList" class="similar-tags"></div>
+          </div>
+        </div>
+
+        <!-- 3D Canvas Legend -->
+        <div class="hud-bottom-right">
+          <div class="legend-card">
+            <div class="legend-item"><span class="legend-dot dot-corpus"></span> Learned Corpus Word (Small Node)</div>
+            <div class="legend-item"><span class="legend-dot dot-custom"></span> User Added Word (Small Node)</div>
+            <div class="legend-item"><span class="legend-dot dot-selected"></span> Selected Word</div>
+            <div class="legend-item"><span class="legend-line"></span> High Similarity Chord</div>
+          </div>
+        </div>
+
+        <!-- Tooltip overlay for hovering over 3D words -->
+        <div id="tooltip3d" class="tooltip-3d hidden"></div>
+      </div>
+
+      <!-- Bottom Drawer: Vocabulary & Similarity Matrix Table -->
+      <div class="bottom-drawer collapsed" id="bottomDrawer">
+        <div class="drawer-header" id="drawerToggle">
+          <div class="drawer-title">
+            <span>📚</span>
+            <strong>Vocabulary Table & Similarity Inspector</strong>
+            <span class="drawer-count" id="drawerVocabCount">(0 items)</span>
+          </div>
+          <button class="drawer-arrow-btn" id="drawerArrow">▲ Show Table</button>
+        </div>
+        <div class="drawer-content">
+          <div class="table-actions">
+            <input type="text" id="vocabSearchInput" placeholder="Filter vocabulary..." class="search-input">
+            <div class="quick-info">Click any row to focus and inspect in 3D space</div>
+          </div>
+          <div class="table-wrapper">
+            <table class="vocab-table">
+              <thead>
+                <tr>
+                  <th>Token ID</th>
+                  <th>Word / Token</th>
+                  <th>Source</th>
+                  <th>Frequency</th>
+                  <th>3D Vector (X, Y, Z)</th>
+                  <th>Top Similar Word</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="vocabTableBody">
+                <tr>
+                  <td colspan="7" class="empty-state">No vocabulary built yet. Click "Build Vocabulary" above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Inline Application Logic (Complete & Self-Contained) -->
+  <script>
+    /**
+     * TokenSphere 3D: Unified Application on index.html
+     * Features: Tokenizer, 3D Vector Space with High-Visibility Grid, Small Word Nodes, and Similarity Insertion
+     */
+
+    // ================= State Management =================
+    const AppState = {
+      corpus: '',
+      tokens: [],
+      vocab: new Map(), // word -> { id, word, freq, coords: [x,y,z], type: 'corpus'|'custom', anchorId?: number, targetSim?: number }
+      idToWord: new Map(),
+      cooccurrence: new Map(),
+      similarityThreshold: 0.50,
+      selectedWord: null,
+      autoRotate: true,
+      showLabels: true,
+      showLinks: true,
+      showGrid: true
+    };
+
+    // Preset corpora
+    const PRESETS = {
+      ai: `Artificial intelligence and machine learning models learn deep patterns from data. 
+Neural networks train on massive dataset representations using gradient optimization. 
+Deep learning algorithms process natural language tokens and semantic embeddings. 
+Machine learning models predict neural activations and artificial intelligence patterns. 
+Natural language processing computes word embeddings and semantic vectors.`,
+      
+      space: `Stars and galaxies orbit across the deep cosmic void in space. 
+Astronomers study distant planets, massive stars, and planetary solar systems. 
+A rocket travels past planetary orbits into solar space and galaxy clusters. 
+Galaxies contain billions of bright stars and mysterious cosmic planets.`,
+      
+      animals: `Forest wolves and wild animals live together in nature reserves. 
+A swift fox and wild wolves run across green forest trees and rivers. 
+Birds fly above mountain rivers while forest animals seek shelter in nature. 
+Wild wolves protect the green nature pack and animal forest habitat.`
+    };
+
+    // ================= DOM Elements =================
+    const elements = {
+      corpusInput: document.getElementById('corpusInput'),
+      lowercaseToggle: document.getElementById('lowercaseToggle'),
+      punctToggle: document.getElementById('punctToggle'),
+      btnBuildVocab: document.getElementById('btnBuildVocab'),
+      vocabStats: document.getElementById('vocabStats'),
+      statVocabSize: document.getElementById('statVocabSize'),
+      statTotalTokens: document.getElementById('statTotalTokens'),
+      statNodesPlotted: document.getElementById('statNodesPlotted'),
+      
+      sentenceInput: document.getElementById('sentenceInput'),
+      btnEncodeSentence: document.getElementById('btnEncodeSentence'),
+      encodeResults: document.getElementById('encodeResults'),
+      tokenPillsContainer: document.getElementById('tokenPillsContainer'),
+      vectorOutput: document.getElementById('vectorOutput'),
+      
+      newWordInput: document.getElementById('newWordInput'),
+      anchorWordSelect: document.getElementById('anchorWordSelect'),
+      similarityInput: document.getElementById('similarityInput'),
+      simValDisplay: document.getElementById('simValDisplay'),
+      meterFill: document.getElementById('meterFill'),
+      btnAddWord: document.getElementById('btnAddWord'),
+      
+      canvasContainer: document.getElementById('canvasContainer'),
+      btnToggleGrid: document.getElementById('btnToggleGrid'),
+      btnAutoRotate: document.getElementById('btnAutoRotate'),
+      btnToggleLabels: document.getElementById('btnToggleLabels'),
+      btnToggleLinks: document.getElementById('btnToggleLinks'),
+      btnResetCamera: document.getElementById('btnResetCamera'),
+      threshSlider: document.getElementById('threshSlider'),
+      threshVal: document.getElementById('threshVal'),
+      
+      inspectorPanel: document.getElementById('inspectorPanel'),
+      btnCloseInspector: document.getElementById('btnCloseInspector'),
+      inspType: document.getElementById('inspType'),
+      inspWord: document.getElementById('inspWord'),
+      inspId: document.getElementById('inspId'),
+      inspFreq: document.getElementById('inspFreq'),
+      inspCoords: document.getElementById('inspCoords'),
+      inspSimilarList: document.getElementById('inspSimilarList'),
+      
+      tooltip3d: document.getElementById('tooltip3d'),
+      bottomDrawer: document.getElementById('bottomDrawer'),
+      drawerToggle: document.getElementById('drawerToggle'),
+      drawerArrow: document.getElementById('drawerArrow'),
+      drawerVocabCount: document.getElementById('drawerVocabCount'),
+      vocabTableBody: document.getElementById('vocabTableBody'),
+      vocabSearchInput: document.getElementById('vocabSearchInput')
+    };
+
+    // ================= Tokenizer Core =================
+    class Tokenizer {
+      static cleanText(text, toLower = true, stripPunct = true) {
+        let cleaned = text;
+        if (toLower) cleaned = cleaned.toLowerCase();
+        if (stripPunct) {
+          cleaned = cleaned.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"'’“”\[\]]/g, ' ');
+        }
+        return cleaned;
+      }
+
+      static tokenize(text, toLower = true, stripPunct = true) {
+        const cleaned = this.cleanText(text, toLower, stripPunct);
+        return cleaned.trim().split(/\s+/).filter(t => t.length > 0);
+      }
+
+      static buildCooccurrence(tokens, windowSize = 3) {
+        const matrix = new Map();
+        for (let i = 0; i < tokens.length; i++) {
+          const target = tokens[i];
+          if (!matrix.has(target)) matrix.set(target, new Map());
+          
+          const start = Math.max(0, i - windowSize);
+          const end = Math.min(tokens.length - 1, i + windowSize);
+          
+          for (let j = start; j <= end; j++) {
+            if (i === j) continue;
+            const neighbor = tokens[j];
+            const targetMap = matrix.get(target);
+            targetMap.set(neighbor, (targetMap.get(neighbor) || 0) + 1);
+          }
+        }
+        return matrix;
+      }
+    }
+
+    // ================= Mathematical Embeddings & 3D PCA =================
+    class EmbeddingSpace {
+      static generate3DEmbeddings(vocabMap, cooccurrenceMatrix) {
+        const words = Array.from(vocabMap.keys());
+        const N = words.length;
+        if (N === 0) return;
+
+        if (N === 1) {
+          vocabMap.get(words[0]).coords = [0, 0, 0];
+          return;
+        }
+
+        const denseVectors = words.map((w1) => {
+          const neighborCounts = cooccurrenceMatrix.get(w1) || new Map();
+          const vec = new Float64Array(N);
+          let sum = 0;
+          words.forEach((w2, j) => {
+            const count = neighborCounts.get(w2) || 0;
+            vec[j] = count;
+            sum += count;
+          });
+          if (sum > 0) {
+            for (let j = 0; j < N; j++) vec[j] /= sum;
+          }
+          return vec;
+        });
+
+        const mean = new Float64Array(N);
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) mean[j] += denseVectors[i][j] / N;
+        }
+        const centered = denseVectors.map(vec => {
+          const c = new Float64Array(N);
+          for (let j = 0; j < N; j++) c[j] = vec[j] - mean[j];
+          return c;
+        });
+
+        const components = [];
+        for (let c = 0; c < 3; c++) {
+          let v = new Float64Array(N);
+          for (let i = 0; i < N; i++) v[i] = Math.sin((i + 1) * (c + 1) * 7.5);
+          
+          for (const prev of components) {
+            let dot = 0;
+            for (let k = 0; k < N; k++) dot += v[k] * prev[k];
+            for (let k = 0; k < N; k++) v[k] -= dot * prev[k];
+          }
+          let norm = Math.hypot(...v) || 1;
+          for (let k = 0; k < N; k++) v[k] /= norm;
+
+          for (let iter = 0; iter < 12; iter++) {
+            const Xv = new Float64Array(N);
+            for (let i = 0; i < N; i++) {
+              let dot = 0;
+              for (let j = 0; j < N; j++) dot += centered[i][j] * v[j];
+              Xv[i] = dot;
+            }
+
+            const nextV = new Float64Array(N);
+            for (let j = 0; j < N; j++) {
+              let dot = 0;
+              for (let i = 0; i < N; i++) dot += centered[i][j] * Xv[i];
+              nextV[j] = dot;
+            }
+
+            for (const prev of components) {
+              let dot = 0;
+              for (let k = 0; k < N; k++) dot += nextV[k] * prev[k];
+              for (let k = 0; k < N; k++) nextV[k] -= dot * prev[k];
+            }
+
+            let nextNorm = Math.hypot(...nextV);
+            if (nextNorm > 1e-9) {
+              for (let k = 0; k < N; k++) nextV[k] /= nextNorm;
+              v = nextV;
+            }
+          }
+          components.push(v);
+        }
+
+        const scaleRadius = 24;
+        words.forEach((w, i) => {
+          const vec = centered[i];
+          let x = 0, y = 0, z = 0;
+          for (let j = 0; j < N; j++) {
+            x += vec[j] * components[0][j];
+            y += vec[j] * components[1][j];
+            z += (components[2] ? vec[j] * components[2][j] : 0);
+          }
+
+          const mag = Math.hypot(x, y, z);
+          if (mag < 1e-4) {
+            const phi = (i / N) * Math.PI * 2;
+            const theta = ((i * 1.618) % 1) * Math.PI - Math.PI / 2;
+            x = Math.cos(theta) * Math.cos(phi) * 0.5;
+            y = Math.sin(theta) * 0.5;
+            z = Math.cos(theta) * Math.sin(phi) * 0.5;
+          }
+
+          vocabMap.get(w).coords = [x, y, z];
+        });
+
+        let maxR = 0.001;
+        words.forEach(w => {
+          const [x, y, z] = vocabMap.get(w).coords;
+          const r = Math.hypot(x, y, z);
+          if (r > maxR) maxR = r;
+        });
+
+        words.forEach(w => {
+          const entry = vocabMap.get(w);
+          const [x, y, z] = entry.coords;
+          const factor = scaleRadius / maxR;
+          entry.coords = [
+            Number((x * factor).toFixed(2)),
+            Number((y * factor).toFixed(2)),
+            Number((z * factor).toFixed(2))
+          ];
+        });
+      }
+
+      static cosineSimilarity(v1, v2) {
+        const dot = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+        const m1 = Math.hypot(...v1);
+        const m2 = Math.hypot(...v2);
+        if (m1 === 0 || m2 === 0) return 0;
+        return Math.max(-1, Math.min(1, dot / (m1 * m2)));
+      }
+
+      static computeTargetSimilarityVector(anchorCoords, targetSimilarity, variationSeed = 0) {
+        const [ax, ay, az] = anchorCoords;
+        const anchorNorm = Math.hypot(ax, ay, az) || 1;
+        const aUnit = [ax / anchorNorm, ay / anchorNorm, az / anchorNorm];
+
+        let perp = Math.abs(aUnit[0]) < 0.8 ? [1, 0, 0] : [0, 1, 0];
+        const dot = aUnit[0] * perp[0] + aUnit[1] * perp[1] + aUnit[2] * perp[2];
+        let u = [
+          perp[0] - dot * aUnit[0],
+          perp[1] - dot * aUnit[1],
+          perp[2] - dot * aUnit[2]
+        ];
+        let uNorm = Math.hypot(...u) || 1;
+        u = [u[0] / uNorm, u[1] / uNorm, u[2] / uNorm];
+
+        const v = [
+          aUnit[1] * u[2] - aUnit[2] * u[1],
+          aUnit[2] * u[0] - aUnit[0] * u[2],
+          aUnit[0] * u[1] - aUnit[1] * u[0]
+        ];
+
+        const clampedSim = Math.max(-0.999, Math.min(0.999, targetSimilarity));
+        const theta = Math.acos(clampedSim);
+        const phi = (variationSeed * 137.5 * Math.PI) / 180;
+        const radial = [
+          Math.cos(phi) * u[0] + Math.sin(phi) * v[0],
+          Math.cos(phi) * u[1] + Math.sin(phi) * v[1],
+          Math.cos(phi) * u[2] + Math.sin(phi) * v[2]
+        ];
+
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        const resultUnit = [
+          cosT * aUnit[0] + sinT * radial[0],
+          cosT * aUnit[1] + sinT * radial[1],
+          cosT * aUnit[2] + sinT * radial[2]
+        ];
+
+        const radius = Math.max(12, anchorNorm + (Math.sin(variationSeed) * 2));
+        return [
+          Number((resultUnit[0] * radius).toFixed(2)),
+          Number((resultUnit[1] * radius).toFixed(2)),
+          Number((resultUnit[2] * radius).toFixed(2))
+        ];
+      }
+    }
+
+    // ================= Highly-Visible 3D Visualizer =================
+    class Visualizer3D {
+      constructor(container) {
+        this.container = container;
+        this.nodes = new Map();
+        this.links = [];
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2(-999, -999);
+        this.hoveredNode = null;
+        this.init();
+      }
+
+      init() {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0xeef2f7);
+        // Distant gentle fog ensuring grids and nodes stay 100% crisp and highly visible
+        this.scene.fog = new THREE.Fog(0xeef2f7, 120, 360);
+
+        this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+        this.camera.position.set(0, 16, 58);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
+        this.container.appendChild(this.renderer.domElement);
+
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.06;
+        this.controls.autoRotate = AppState.autoRotate;
+        this.controls.autoRotateSpeed = 0.8;
+        this.controls.maxDistance = 160;
+        this.controls.minDistance = 5;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        this.scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xe0e7ff, 0.85);
+        dirLight.position.set(20, 40, 20);
+        this.scene.add(dirLight);
+
+        const warmLight = new THREE.PointLight(0xfce7f3, 1.2, 90);
+        warmLight.position.set(-20, -20, -20);
+        this.scene.add(warmLight);
+
+        this.createBackgroundDust();
+
+        // Build HIGH-VISIBILITY 3D Grid & Coordinate System
+        this.create3DGridSystem();
+
+        window.addEventListener('resize', () => this.onWindowResize());
+        this.container.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        this.container.addEventListener('click', (e) => this.onClick(e));
+
+        this.animate();
+      }
+
+      createBackgroundDust() {
+        const dustCount = 350;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(dustCount * 3);
+        for (let i = 0; i < dustCount * 3; i += 3) {
+          positions[i] = (Math.random() - 0.5) * 180;
+          positions[i + 1] = (Math.random() - 0.5) * 180;
+          positions[i + 2] = (Math.random() - 0.5) * 180;
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({
+          color: 0x94a3b8,
+          size: 1.1,
+          transparent: true,
+          opacity: 0.35
+        });
+        const dust = new THREE.Points(geometry, material);
+        this.scene.add(dust);
+      }
+
+      /**
+       * Highly visible 3D Grid System with sharp contrasting lines
+       */
+      create3DGridSystem() {
+        this.gridGroup = new THREE.Group();
+
+        // 1. High-contrast Ground Grid (XZ plane at y = -22)
+        // Center lines: 0x4338ca (rich indigo), Grid lines: 0x64748b (darker, highly visible slate)
+        const groundGrid = new THREE.GridHelper(80, 40, 0x4338ca, 0x64748b);
+        groundGrid.position.y = -22;
+        groundGrid.material.transparent = true;
+        groundGrid.material.opacity = 0.85; // High visibility
+        this.gridGroup.add(groundGrid);
+
+        // 2. Equatorial Reference Grid (XZ plane at origin y = 0)
+        // Helps immediately identify node vertical heights
+        const originGrid = new THREE.GridHelper(70, 28, 0x6366f1, 0x94a3b8);
+        originGrid.position.y = 0;
+        originGrid.material.transparent = true;
+        originGrid.material.opacity = 0.55;
+        this.gridGroup.add(originGrid);
+
+        // 3. 3D Cartesian Coordinate Axes (Red = X, Green = Y, Blue = Z)
+        const axes = new THREE.AxesHelper(36);
+        axes.renderOrder = 2;
+        this.gridGroup.add(axes);
+
+        // 4. Volumetric Bounding Coordinate Box (defines spatial volume)
+        const boxGeo = new THREE.BoxGeometry(52, 44, 52);
+        const wireGeo = new THREE.WireframeGeometry(boxGeo);
+        const cage = new THREE.LineSegments(wireGeo, new THREE.LineBasicMaterial({
+          color: 0x64748b,
+          transparent: true,
+          opacity: 0.5
+        }));
+        this.gridGroup.add(cage);
+
+        // 5. Origin Beacon
+        const originGeo = new THREE.SphereGeometry(0.5, 16, 16);
+        const originMat = new THREE.MeshBasicMaterial({ color: 0x6366f1 });
+        const originMesh = new THREE.Mesh(originGeo, originMat);
+        this.gridGroup.add(originMesh);
+
+        // 6. 3D Dimension Axis Badges
+        const makeAxisLabel = (txt, pos, color) => {
+          const cvs = document.createElement('canvas');
+          cvs.width = 160; cvs.height = 48;
+          const ctx = cvs.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(4, 4, 152, 40, 10) : ctx.rect(4, 4, 152, 40);
+          ctx.fill();
+          ctx.stroke();
+          ctx.font = 'bold 20px "JetBrains Mono", monospace';
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(txt, 80, 24);
+          const tex = new THREE.CanvasTexture(cvs);
+          const sm = new THREE.SpriteMaterial({ map: tex, transparent: true });
+          const spr = new THREE.Sprite(sm);
+          spr.position.set(...pos);
+          spr.scale.set(5.2, 1.55, 1);
+          return spr;
+        };
+
+        this.gridGroup.add(makeAxisLabel('X (Dim 1)', [38, 0, 0], '#dc2626'));
+        this.gridGroup.add(makeAxisLabel('Y (Dim 2)', [0, 24, 0], '#059669'));
+        this.gridGroup.add(makeAxisLabel('Z (Dim 3)', [0, 0, 38], '#2563eb'));
+
+        this.gridGroup.visible = AppState.showGrid;
+        this.scene.add(this.gridGroup);
+      }
+
+      /**
+       * SMALL SIZE Word Text Sprite (Crisp & Compact)
+       */
+      makeSmallTextSprite(text, isCustom = false) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 46;
+        const ctx = canvas.getContext('2d');
+
+        // Compact white rounded badge with pastel border
+        ctx.fillStyle = isCustom ? '#fdf2f8' : '#ffffff';
+        ctx.strokeStyle = isCustom ? '#ec4899' : '#6366f1';
+        ctx.lineWidth = 2;
+        
+        const x = 4, y = 4, w = 152, h = 38, r = 10;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = isCustom ? '#be185d' : '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 80, 23);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        const spriteMaterial = new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          depthWrite: false
+        });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        // Scaled to compact small size (2.6, 0.74, 1)
+        sprite.scale.set(2.6, 0.74, 1);
+        sprite.visible = AppState.showLabels;
+        return sprite;
+      }
+
+      /**
+       * Render Vocabulary with SMALL Word Nodes
+       */
+      renderVocab(vocabMap) {
+        this.clearNodesAndLinks();
+
+        // Small base sphere geometry (radius 0.45 instead of 1.0)
+        const sphereGeo = new THREE.SphereGeometry(0.45, 20, 20);
+
+        vocabMap.forEach((entry, word) => {
+          const isCustom = entry.type === 'custom';
+          const baseColor = isCustom ? 0xec4899 : 0x6366f1;
+          const material = new THREE.MeshStandardMaterial({
+            color: baseColor,
+            roughness: 0.35,
+            metalness: 0.1,
+            emissive: baseColor,
+            emissiveIntensity: 0.2
+          });
+
+          const mesh = new THREE.Mesh(sphereGeo, material);
+          const [x, y, z] = entry.coords;
+          mesh.position.set(x, y, z);
+          mesh.userData = { word, ...entry };
+
+          // Small refined scale factor: 0.75 to 1.3
+          const scale = Math.min(1.3, Math.max(0.75, 0.75 + Math.log2(entry.freq || 1) * 0.2));
+          mesh.scale.set(scale, scale, scale);
+
+          // Small text sprite placed right above node
+          const sprite = this.makeSmallTextSprite(word, isCustom);
+          sprite.position.set(x, y + (scale * 0.5) + 0.85, z);
+
+          this.scene.add(mesh);
+          this.scene.add(sprite);
+
+          this.nodes.set(word, { mesh, sprite, coords: entry.coords, data: entry });
+        });
+
+        this.updateSimilarityLinks();
+      }
+
+      /**
+       * Render High-Visibility Similarity Links
+       */
+      updateSimilarityLinks() {
+        this.links.forEach(l => this.scene.remove(l));
+        this.links = [];
+
+        if (!AppState.showLinks) return;
+
+        const words = Array.from(this.nodes.keys());
+        const threshold = AppState.similarityThreshold;
+
+        for (let i = 0; i < words.length; i++) {
+          for (let j = i + 1; j < words.length; j++) {
+            const w1 = words[i];
+            const w2 = words[j];
+            const n1 = this.nodes.get(w1);
+            const n2 = this.nodes.get(w2);
+
+            const sim = EmbeddingSpace.cosineSimilarity(n1.coords, n2.coords);
+            if (sim >= threshold) {
+              const points = [
+                new THREE.Vector3(...n1.coords),
+                new THREE.Vector3(...n2.coords)
+              ];
+              const geometry = new THREE.BufferGeometry().setFromPoints(points);
+              const alpha = (sim - threshold) / (1 - threshold + 0.001);
+              const isSelectedLink = AppState.selectedWord && (w1 === AppState.selectedWord || w2 === AppState.selectedWord);
+
+              // High-visibility chord colors
+              const material = new THREE.LineBasicMaterial({
+                color: isSelectedLink ? 0xf59e0b : 0x6366f1,
+                transparent: true,
+                opacity: isSelectedLink ? 0.95 : Math.max(0.3, alpha * 0.85),
+                linewidth: isSelectedLink ? 2.5 : 1.5
+              });
+
+              const line = new THREE.Line(geometry, material);
+              this.scene.add(line);
+              this.links.push(line);
+            }
+          }
+        }
+      }
+
+      highlightWord(word) {
+        AppState.selectedWord = word;
+        this.nodes.forEach(({ mesh }, w) => {
+          if (w === word) {
+            mesh.material.color.setHex(0xf59e0b);
+            mesh.material.emissive.setHex(0xf59e0b);
+            mesh.material.emissiveIntensity = 0.6;
+            mesh.scale.set(1.6, 1.6, 1.6);
+          } else {
+            const isCustom = this.nodes.get(w).data.type === 'custom';
+            const baseColor = isCustom ? 0xec4899 : 0x6366f1;
+            mesh.material.color.setHex(baseColor);
+            mesh.material.emissive.setHex(baseColor);
+            mesh.material.emissiveIntensity = 0.2;
+            const entry = this.nodes.get(w).data;
+            const scale = Math.min(1.3, Math.max(0.75, 0.75 + Math.log2(entry.freq || 1) * 0.2));
+            mesh.scale.set(scale, scale, scale);
+          }
+        });
+
+        this.updateSimilarityLinks();
+      }
+
+      focusWord(word) {
+        const node = this.nodes.get(word);
+        if (!node) return;
+        this.highlightWord(word);
+
+        const [tx, ty, tz] = node.coords;
+        const targetVec = new THREE.Vector3(tx, ty, tz);
+        
+        let step = 0;
+        const startTarget = this.controls.target.clone();
+        const animateFocus = () => {
+          step += 0.05;
+          this.controls.target.lerpVectors(startTarget, targetVec, step);
+          if (step < 1) requestAnimationFrame(animateFocus);
+        };
+        animateFocus();
+      }
+
+      clearNodesAndLinks() {
+        this.nodes.forEach(({ mesh, sprite }) => {
+          this.scene.remove(mesh);
+          this.scene.remove(sprite);
+          mesh.geometry.dispose();
+          mesh.material.dispose();
+          sprite.material.dispose();
+        });
+        this.nodes.clear();
+
+        this.links.forEach(l => {
+          this.scene.remove(l);
+          l.geometry.dispose();
+          l.material.dispose();
+        });
+        this.links = [];
+      }
+
+      onMouseMove(e) {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const meshes = Array.from(this.nodes.values()).map(n => n.mesh);
+        const intersects = this.raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+          const hit = intersects[0].object;
+          const word = hit.userData.word;
+          this.hoveredNode = word;
+          this.container.style.cursor = 'pointer';
+
+          const screenPos = hit.position.clone().project(this.camera);
+          const sx = ((screenPos.x + 1) * rect.width) / 2 + rect.left;
+          const sy = ((-screenPos.y + 1) * rect.height) / 2 + rect.top;
+
+          elements.tooltip3d.style.left = `${sx}px`;
+          elements.tooltip3d.style.top = `${sy}px`;
+          elements.tooltip3d.innerHTML = `<strong>${word}</strong> (ID: #${hit.userData.id})`;
+          elements.tooltip3d.classList.remove('hidden');
+        } else {
+          this.hoveredNode = null;
+          this.container.style.cursor = 'grab';
+          elements.tooltip3d.classList.add('hidden');
+        }
+      }
+
+      onClick(e) {
+        if (this.hoveredNode) {
+          openInspector(this.hoveredNode);
+          this.focusWord(this.hoveredNode);
+        }
+      }
+
+      onWindowResize() {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+      }
+
+      animate() {
+        requestAnimationFrame(() => this.animate());
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    let visualizer = null;
+
+    // ================= Action Handlers =================
+    function handleBuildVocabulary() {
+      const text = elements.corpusInput.value.trim();
+      if (!text) { alert('Please enter or select a training corpus first.'); return; }
+
+      const toLower = elements.lowercaseToggle.checked;
+      const stripPunct = elements.punctToggle.checked;
+
+      const tokens = Tokenizer.tokenize(text, toLower, stripPunct);
+      if (tokens.length === 0) { alert('No valid tokens extracted.'); return; }
+
+      AppState.tokens = tokens;
+      AppState.corpus = text;
+      AppState.vocab.clear();
+      AppState.idToWord.clear();
+
+      let idCounter = 1;
+      tokens.forEach(tok => {
+        if (!AppState.vocab.has(tok)) {
+          const entry = {
+            id: idCounter,
+            word: tok,
+            freq: 0,
+            coords: [0, 0, 0],
+            type: 'corpus'
+          };
+          AppState.vocab.set(tok, entry);
+          AppState.idToWord.set(idCounter, tok);
+          idCounter++;
+        }
+        AppState.vocab.get(tok).freq += 1;
+      });
+
+      AppState.cooccurrence = Tokenizer.buildCooccurrence(tokens, 3);
+      EmbeddingSpace.generate3DEmbeddings(AppState.vocab, AppState.cooccurrence);
+
+      elements.statVocabSize.textContent = AppState.vocab.size;
+      elements.statTotalTokens.textContent = tokens.length;
+      elements.statNodesPlotted.textContent = AppState.vocab.size;
+      elements.vocabStats.classList.remove('hidden');
+
+      updateAnchorWordDropdown();
+      visualizer.renderVocab(AppState.vocab);
+      renderVocabTable();
+
+      if (tokens.length > 0) openInspector(tokens[0]);
+    }
+
+    function handleEncodeSentence() {
+      const sentence = elements.sentenceInput.value.trim();
+      if (!sentence) { alert('Please enter a sentence to encode.'); return; }
+      if (AppState.vocab.size === 0) { alert('Please build vocabulary first.'); return; }
+
+      const toLower = elements.lowercaseToggle.checked;
+      const stripPunct = elements.punctToggle.checked;
+      const tokens = Tokenizer.tokenize(sentence, toLower, stripPunct);
+
+      elements.tokenPillsContainer.innerHTML = '';
+      const vectorIds = [];
+
+      tokens.forEach(word => {
+        const isKnown = AppState.vocab.has(word);
+        const tokenData = isKnown ? AppState.vocab.get(word) : null;
+        const tokenId = isKnown ? tokenData.id : '[OOV]';
+        vectorIds.push(isKnown ? tokenId : -1);
+
+        const pill = document.createElement('div');
+        pill.className = `token-pill ${isKnown ? '' : 'oov'}`;
+        pill.title = isKnown ? `Vocab ID: ${tokenId} | Click to focus in 3D` : 'Out of Vocabulary Token';
+        pill.innerHTML = `
+          <span class="token-str">${word}</span>
+          <span class="token-id">ID: #${tokenId}</span>
+        `;
+
+        if (isKnown) {
+          pill.addEventListener('click', () => {
+            visualizer.focusWord(word);
+            openInspector(word);
+          });
+        }
+        elements.tokenPillsContainer.appendChild(pill);
+      });
+
+      elements.vectorOutput.textContent = `[ ${vectorIds.join(', ')} ]`;
+      elements.encodeResults.classList.remove('hidden');
+
+      const firstKnown = tokens.find(w => AppState.vocab.has(w));
+      if (firstKnown) visualizer.focusWord(firstKnown);
+    }
+
+    let customWordCounter = 0;
+    function handleAddNewWord() {
+      const newWordRaw = elements.newWordInput.value.trim();
+      const anchorWord = elements.anchorWordSelect.value;
+      const targetSim = parseFloat(elements.similarityInput.value);
+
+      if (!newWordRaw) { alert('Please enter a new word to add.'); return; }
+      if (!anchorWord || !AppState.vocab.has(anchorWord)) { alert('Please select a valid anchor word.'); return; }
+
+      const toLower = elements.lowercaseToggle.checked;
+      const newWord = toLower ? newWordRaw.toLowerCase() : newWordRaw;
+
+      if (AppState.vocab.has(newWord)) {
+        alert(`The word "${newWord}" is already in the vocabulary.`);
+        visualizer.focusWord(newWord);
+        return;
+      }
+
+      customWordCounter++;
+      const anchorEntry = AppState.vocab.get(anchorWord);
+      
+      const newCoords = EmbeddingSpace.computeTargetSimilarityVector(
+        anchorEntry.coords,
+        targetSim,
+        customWordCounter
+      );
+
+      const newId = AppState.vocab.size + 1;
+      const newEntry = {
+        id: newId,
+        word: newWord,
+        freq: 1,
+        coords: newCoords,
+        type: 'custom',
+        anchorId: anchorEntry.id,
+        anchorWord: anchorWord,
+        targetSim: targetSim
+      };
+
+      AppState.vocab.set(newWord, newEntry);
+      AppState.idToWord.set(newId, newWord);
+
+      elements.statVocabSize.textContent = AppState.vocab.size;
+      elements.statNodesPlotted.textContent = AppState.vocab.size;
+
+      updateAnchorWordDropdown();
+      visualizer.renderVocab(AppState.vocab);
+      renderVocabTable();
+
+      visualizer.focusWord(newWord);
+      openInspector(newWord);
+
+      elements.newWordInput.value = '';
+    }
+
+    function updateAnchorWordDropdown() {
+      const currentVal = elements.anchorWordSelect.value;
+      elements.anchorWordSelect.innerHTML = '';
+
+      if (AppState.vocab.size === 0) {
+        elements.anchorWordSelect.innerHTML = '<option value="">(Build vocab first)</option>';
+        return;
+      }
+
+      Array.from(AppState.vocab.keys()).sort().forEach(word => {
+        const opt = document.createElement('option');
+        opt.value = word;
+        opt.textContent = `${word} (#${AppState.vocab.get(word).id})`;
+        elements.anchorWordSelect.appendChild(opt);
+      });
+
+      if (currentVal && AppState.vocab.has(currentVal)) {
+        elements.anchorWordSelect.value = currentVal;
+      }
+    }
+
+    function openInspector(word) {
+      const entry = AppState.vocab.get(word);
+      if (!entry) return;
+
+      elements.inspWord.textContent = word;
+      elements.inspId.textContent = `ID: #${entry.id}`;
+      elements.inspType.textContent = entry.type === 'custom' ? 'USER ADDED WORD' : 'CORPUS TOKEN';
+      elements.inspType.style.background = entry.type === 'custom' ? 'var(--accent-rose-light)' : 'var(--accent-periwinkle-light)';
+      elements.inspType.style.color = entry.type === 'custom' ? 'var(--accent-rose-deep)' : 'var(--accent-periwinkle-deep)';
+      elements.inspFreq.textContent = entry.freq;
+      elements.inspCoords.textContent = `(${entry.coords.join(', ')})`;
+
+      const neighbors = [];
+      AppState.vocab.forEach((other, otherWord) => {
+        if (otherWord !== word) {
+          const sim = EmbeddingSpace.cosineSimilarity(entry.coords, other.coords);
+          neighbors.push({ word: otherWord, sim });
+        }
+      });
+
+      neighbors.sort((a, b) => b.sim - a.sim);
+      const topK = neighbors.slice(0, 4);
+
+      elements.inspSimilarList.innerHTML = '';
+      if (topK.length === 0) {
+        elements.inspSimilarList.innerHTML = '<div style="font-size:11px;color:#94a3b8;">No other words in space yet.</div>';
+      } else {
+        topK.forEach(({ word: nw, sim }) => {
+          const item = document.createElement('div');
+          item.className = 'similar-tag-item';
+          item.innerHTML = `
+            <span class="similar-tag-word">${nw}</span>
+            <span class="similar-tag-score">Sim: ${(sim * 100).toFixed(1)}%</span>
+          `;
+          item.addEventListener('click', () => {
+            visualizer.focusWord(nw);
+            openInspector(nw);
+          });
+          elements.inspSimilarList.appendChild(item);
+        });
+      }
+
+      elements.inspectorPanel.classList.remove('hidden');
+    }
+
+    function renderVocabTable() {
+      const query = (elements.vocabSearchInput.value || '').toLowerCase().trim();
+      const words = Array.from(AppState.vocab.keys());
+      elements.drawerVocabCount.textContent = `(${words.length} items)`;
+
+      if (words.length === 0) {
+        elements.vocabTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="empty-state">No vocabulary built yet. Click "Build Vocabulary" above.</td>
+          </tr>`;
+        return;
+      }
+
+      const filtered = words.filter(w => w.toLowerCase().includes(query));
+      elements.vocabTableBody.innerHTML = '';
+
+      filtered.forEach(word => {
+        const entry = AppState.vocab.get(word);
+
+        let topNeighbor = '-';
+        let topSim = -1;
+        AppState.vocab.forEach((other, otherW) => {
+          if (otherW !== word) {
+            const sim = EmbeddingSpace.cosineSimilarity(entry.coords, other.coords);
+            if (sim > topSim) {
+              topSim = sim;
+              topNeighbor = `${otherW} (${(sim * 100).toFixed(0)}%)`;
+            }
+          }
+        });
+
+        const tr = document.createElement('tr');
+        if (AppState.selectedWord === word) tr.classList.add('active-row');
+
+        tr.innerHTML = `
+          <td><span class="token-badge">#${entry.id}</span></td>
+          <td><strong style="color: var(--text-heading);">${word}</strong></td>
+          <td>
+            <span class="source-badge ${entry.type === 'custom' ? 'source-custom' : 'source-corpus'}">
+              ${entry.type === 'custom' ? 'Custom' : 'Corpus'}
+            </span>
+          </td>
+          <td>${entry.freq}</td>
+          <td><code style="font-family: var(--font-mono); color: var(--accent-lilac-deep); font-size: 11px;">[${entry.coords.join(', ')}]</code></td>
+          <td style="font-weight: 600;">${topNeighbor}</td>
+          <td><button class="action-btn-sm" data-word="${word}">Focus 3D</button></td>
+        `;
+
+        tr.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'BUTTON') {
+            visualizer.focusWord(word);
+            openInspector(word);
+            highlightTableRow(tr);
+          }
+        });
+
+        tr.querySelector('button').addEventListener('click', (e) => {
+          e.stopPropagation();
+          visualizer.focusWord(word);
+          openInspector(word);
+          highlightTableRow(tr);
+        });
+
+        elements.vocabTableBody.appendChild(tr);
+      });
+    }
+
+    function highlightTableRow(activeTr) {
+      document.querySelectorAll('.vocab-table tbody tr').forEach(r => r.classList.remove('active-row'));
+      activeTr.classList.add('active-row');
+    }
+
+    // ================= Event Wire-ups =================
+    function initEvents() {
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const presetKey = btn.dataset.preset;
+          elements.corpusInput.value = PRESETS[presetKey] || '';
+        });
+      });
+
+      elements.corpusInput.value = PRESETS.ai;
+      elements.btnBuildVocab.addEventListener('click', handleBuildVocabulary);
+      elements.btnEncodeSentence.addEventListener('click', handleEncodeSentence);
+      elements.btnAddWord.addEventListener('click', handleAddNewWord);
+
+      elements.similarityInput.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        elements.simValDisplay.textContent = val.toFixed(2);
+        elements.meterFill.style.width = `${val * 100}%`;
+      });
+
+      elements.threshSlider.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        AppState.similarityThreshold = val;
+        elements.threshVal.innerHTML = `&ge; ${val.toFixed(2)}`;
+        if (visualizer) visualizer.updateSimilarityLinks();
+      });
+
+      elements.btnToggleGrid.addEventListener('click', () => {
+        AppState.showGrid = !AppState.showGrid;
+        if (visualizer && visualizer.gridGroup) {
+          visualizer.gridGroup.visible = AppState.showGrid;
+        }
+        elements.btnToggleGrid.classList.toggle('active', AppState.showGrid);
+      });
+
+      elements.btnAutoRotate.addEventListener('click', () => {
+        AppState.autoRotate = !AppState.autoRotate;
+        visualizer.controls.autoRotate = AppState.autoRotate;
+        elements.btnAutoRotate.classList.toggle('active', AppState.autoRotate);
+      });
+
+      elements.btnToggleLabels.addEventListener('click', () => {
+        AppState.showLabels = !AppState.showLabels;
+        elements.btnToggleLabels.classList.toggle('active', AppState.showLabels);
+        visualizer.nodes.forEach(n => { n.sprite.visible = AppState.showLabels; });
+      });
+
+      elements.btnToggleLinks.addEventListener('click', () => {
+        AppState.showLinks = !AppState.showLinks;
+        elements.btnToggleLinks.classList.toggle('active', AppState.showLinks);
+        visualizer.updateSimilarityLinks();
+      });
+
+      elements.btnResetCamera.addEventListener('click', () => {
+        visualizer.camera.position.set(0, 16, 58);
+        visualizer.controls.target.set(0, 0, 0);
+      });
+
+      elements.btnCloseInspector.addEventListener('click', () => {
+        elements.inspectorPanel.classList.add('hidden');
+      });
+
+      elements.drawerToggle.addEventListener('click', () => {
+        elements.bottomDrawer.classList.toggle('collapsed');
+        const isCollapsed = elements.bottomDrawer.classList.contains('collapsed');
+        elements.drawerArrow.textContent = isCollapsed ? '▲ Show Table' : '▼ Hide Table';
+      });
+
+      elements.vocabSearchInput.addEventListener('input', () => {
+        renderVocabTable();
+      });
+    }
+
+    // ================= Initialization =================
+    window.addEventListener('DOMContentLoaded', () => {
+      visualizer = new Visualizer3D(elements.canvasContainer);
+      initEvents();
+      handleBuildVocabulary();
+      handleEncodeSentence();
+    });
+  </script>
+</body>
+</html>
