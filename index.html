@@ -3,22 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TokenSphere 3D - Semantic Space & Tokenizer</title>
+  <title>LLM Pipeline</title>
   
   <!-- Three.js and OrbitControls via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Google Fonts: Raleway & JetBrains Mono -->
+  <!-- Astralga font will be loaded via local @font-face -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Raleway:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     /* =========================================================
-       TokenSphere: 60-30-10 Pastel & Pale Architecture
+       UJJWAL 3D: One-Page Website Architecture
+       Design: 60-30-10 Pastel & Pale Color Palette
+       Typography: Raleway & JetBrains Mono
        60% Dominant: Pale Porcelain Canvas (#f6f8fb, #eef2f7)
-       30% Secondary: Pure White Cards & Dark Slate Type (#ffffff, #1e293b, #475569)
+       30% Secondary: Pure White Cards & Dark Slate Type (#ffffff, #0f172a, #334155)
        10% Accent: Pastel Periwinkle (#6366f1, #818cf8), Pastel Lilac (#a855f7), Rose (#f472b6)
        ========================================================= */
     :root {
@@ -52,7 +54,7 @@
       --accent-amber: #f59e0b;
       --accent-amber-light: #fef3c7;
       
-      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-sans: 'Raleway', system-ui, -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
       
       --radius-sm: 8px;
@@ -61,7 +63,7 @@
       --radius-full: 9999px;
       
       --shadow-soft: 0 4px 20px -2px rgba(100, 116, 139, 0.08);
-      --shadow-hover: 0 10px 25px -4px rgba(99, 102, 241, 0.12);
+      --shadow-hover: 0 10px 25px -4px rgba(99, 102, 241, 0.14);
       --glass-blur: blur(16px);
     }
 
@@ -78,7 +80,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Layout Structure: Sidebar + Main 3D Viewport */
+    /* One-Page Layout: Left Sidebar Deck + Right 3D Viewport */
     .app-layout {
       display: flex;
       height: 100vh;
@@ -86,11 +88,11 @@
       overflow: hidden;
     }
 
-    /* Left Sidebar: All Controls & Tokenizer */
+    /* Left Sidebar: All Controls in One Page View */
     .sidebar {
-      width: 450px;
-      min-width: 410px;
-      max-width: 480px;
+      width: 470px;
+      min-width: 420px;
+      max-width: 500px;
       background: var(--surface-sidebar);
       border-right: 1px solid var(--border-subtle);
       display: flex;
@@ -99,53 +101,103 @@
       box-shadow: 4px 0 24px rgba(100, 116, 139, 0.08);
     }
 
+    /* Brand Header with Custom Ujjwal Logo */
     .app-header {
-      padding: 18px 24px;
+      padding: 16px 22px;
       border-bottom: 1px solid var(--border-subtle);
       background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
     }
 
     .logo {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
-    .logo-icon {
-      font-size: 26px;
-      background: var(--accent-periwinkle-light);
-      width: 44px;
-      height: 44px;
+    .logo-icon-wrap {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent-periwinkle-light) 0%, var(--accent-lilac-light) 100%);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--radius-md);
-      box-shadow: 0 4px 12px rgba(129, 140, 248, 0.18);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .logo-icon-wrap:hover {
+      transform: scale(1.06) rotate(3deg);
     }
 
     .logo-text h1 {
-      font-size: 19px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-      color: var(--text-heading);
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #0f172a 30%, var(--accent-periwinkle-deep) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
     }
 
     .logo-text p {
       font-size: 11px;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      font-weight: 600;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      margin-top: 2px;
     }
 
+    /* Section Quick Jumper Pills */
+    .section-nav-pills {
+      display: flex;
+      gap: 5px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .section-nav-pills::-webkit-scrollbar { display: none; }
+
+    .nav-pill {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 5px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-body);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .nav-pill:hover {
+      background: var(--accent-periwinkle-light);
+      border-color: var(--accent-periwinkle);
+      color: var(--accent-periwinkle-deep);
+    }
+
+    /* Scrollable Deck: All Features Visible on One Page */
     .scroll-area {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 18px;
       background: var(--bg-main);
+      scroll-behavior: smooth;
     }
 
     .scroll-area::-webkit-scrollbar { width: 6px; }
@@ -162,11 +214,17 @@
       gap: 14px;
       box-shadow: var(--shadow-soft);
       transition: all 0.2s ease;
+      position: relative;
     }
 
     .card:hover {
       border-color: var(--border-strong);
       box-shadow: var(--shadow-hover);
+    }
+
+    .card.highlighted {
+      border-color: var(--accent-periwinkle);
+      box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
     }
 
     .card-accent {
@@ -181,7 +239,7 @@
     .card-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .step-badge {
@@ -194,7 +252,7 @@
       align-items: center;
       justify-content: center;
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 900;
       flex-shrink: 0;
       border: 1px solid rgba(129, 140, 248, 0.3);
     }
@@ -206,8 +264,8 @@
     }
 
     .card-header h2 {
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 15.5px;
+      font-weight: 800;
       color: var(--text-heading);
     }
 
@@ -226,7 +284,7 @@
 
     .corpus-presets label {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -242,9 +300,9 @@
       background: #f1f5f9;
       border: 1px solid var(--border-subtle);
       color: var(--text-body);
-      padding: 7px 10px;
+      padding: 7px 8px;
       font-size: 11.5px;
-      font-weight: 600;
+      font-weight: 700;
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all 0.2s;
@@ -255,10 +313,10 @@
       background: var(--accent-periwinkle-light);
       border-color: var(--accent-periwinkle);
       color: var(--accent-periwinkle-deep);
-      font-weight: 700;
+      font-weight: 800;
     }
 
-    /* Form Fields */
+    /* Inputs */
     .form-group {
       display: flex;
       flex-direction: column;
@@ -267,13 +325,13 @@
 
     .form-group label {
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-heading);
       display: flex;
       justify-content: space-between;
     }
 
-    .form-row { display: flex; gap: 12px; }
+    .form-row { display: flex; gap: 10px; }
     .form-group.half { flex: 1; }
 
     textarea, input[type="text"], select {
@@ -281,7 +339,7 @@
       background: #f8fafc;
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 10px 14px;
+      padding: 10px 13px;
       color: var(--text-heading);
       font-size: 13px;
       font-family: inherit;
@@ -312,12 +370,13 @@
       font-size: 12px;
     }
 
-    /* Toggles */
+    /* Options */
     .tokenizer-options {
       display: flex;
       gap: 16px;
       font-size: 12px;
       color: var(--text-body);
+      font-weight: 600;
     }
 
     .toggle-control {
@@ -383,7 +442,7 @@
 
     .value-highlight {
       color: var(--accent-lilac-deep);
-      font-weight: 700;
+      font-weight: 800;
       font-family: var(--font-mono);
     }
 
@@ -412,7 +471,7 @@
       justify-content: space-between;
       font-size: 10.5px;
       color: var(--text-faint);
-      font-weight: 500;
+      font-weight: 600;
     }
 
     /* Buttons */
@@ -421,9 +480,9 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 10px 16px;
+      padding: 10.5px 16px;
       border-radius: var(--radius-md);
-      font-weight: 700;
+      font-weight: 800;
       font-size: 13px;
       border: none;
       cursor: pointer;
@@ -482,7 +541,7 @@
       font-size: 10px;
       color: var(--text-muted);
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .stat-value {
@@ -503,7 +562,7 @@
 
     .result-title {
       font-size: 11.5px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-heading);
       margin-bottom: 6px;
     }
@@ -531,8 +590,8 @@
     .token-pill.oov { background: #fee2e2; border-color: #fca5a5; }
     .token-pill.oov .token-id { color: #ef4444; }
 
-    .token-str { font-weight: 700; color: var(--text-heading); }
-    .token-id { font-family: var(--font-mono); font-size: 10px; color: var(--accent-periwinkle-deep); font-weight: 600; }
+    .token-str { font-weight: 800; color: var(--text-heading); }
+    .token-id { font-family: var(--font-mono); font-size: 10px; color: var(--accent-periwinkle-deep); font-weight: 700; }
 
     .code-box {
       background: #f8fafc;
@@ -545,7 +604,7 @@
       word-break: break-all;
       max-height: 80px;
       overflow-y: auto;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     /* ================= Main 3D Viewport ================= */
@@ -616,7 +675,7 @@
     }
 
     .hud-title {
-      font-weight: 800;
+      font-weight: 900;
       font-size: 14px;
       color: var(--text-heading);
       display: block;
@@ -625,6 +684,7 @@
     .hud-subtitle {
       font-size: 11px;
       color: var(--text-muted);
+      font-weight: 600;
     }
 
     .viewport-tools {
@@ -688,7 +748,7 @@
       justify-content: space-between;
       align-items: center;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-heading);
     }
 
@@ -706,6 +766,7 @@
       font-size: 10.5px;
       color: var(--text-muted);
       line-height: 1.35;
+      font-weight: 600;
     }
 
     /* Legend (Bottom Right) */
@@ -734,7 +795,7 @@
       gap: 10px;
       font-size: 11.5px;
       color: var(--text-body);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
@@ -791,7 +852,7 @@
 
     .inspector-header h3 {
       font-size: 20px;
-      font-weight: 800;
+      font-weight: 900;
       color: var(--text-heading);
       word-break: break-all;
     }
@@ -821,11 +882,11 @@
       color: var(--text-muted);
     }
     .insp-meta-row strong { color: var(--text-heading); }
-    .insp-meta-row code { font-family: var(--font-mono); color: var(--accent-lilac-deep); font-weight: 600; }
+    .insp-meta-row code { font-family: var(--font-mono); color: var(--accent-lilac-deep); font-weight: 700; }
 
     .similar-list-box h4 {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
       color: var(--text-muted);
       margin-bottom: 8px;
@@ -857,7 +918,7 @@
       border-color: var(--accent-periwinkle-deep);
     }
 
-    .similar-tag-word { font-weight: 700; color: var(--text-heading); }
+    .similar-tag-word { font-weight: 800; color: var(--text-heading); }
     .similar-tag-score { font-family: var(--font-mono); font-size: 10.5px; color: #059669; font-weight: 700; }
 
     /* Tooltip */
@@ -871,7 +932,7 @@
       border-radius: var(--radius-sm);
       color: #ffffff;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
       z-index: 50;
       transform: translate(-50%, -120%);
@@ -915,7 +976,7 @@
       gap: 10px;
       font-size: 13px;
       color: var(--text-heading);
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .drawer-count {
@@ -930,7 +991,7 @@
       border: none;
       color: var(--accent-periwinkle-deep);
       font-size: 11.5px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
     }
 
@@ -960,6 +1021,7 @@
     .quick-info {
       font-size: 11.5px;
       color: var(--text-muted);
+      font-weight: 600;
     }
 
     .table-wrapper {
@@ -985,7 +1047,7 @@
       top: 0;
       background: #f8fafc;
       color: var(--text-heading);
-      font-weight: 700;
+      font-weight: 800;
       padding: 9px 12px;
       border-bottom: 1px solid var(--border-subtle);
       z-index: 2;
@@ -1049,33 +1111,61 @@
 
     @media (max-width: 1024px) {
       .app-layout { flex-direction: column; }
-      .sidebar { width: 100%; min-width: 100%; max-width: 100%; height: 48vh; }
-      .main-viewport { height: 52vh; }
+      .sidebar { width: 100%; min-width: 100%; max-width: 100%; height: 50vh; }
+      .main-viewport { height: 50vh; }
     }
   </style>
 </head>
 <body>
   <div class="app-layout">
-    <!-- Left Sidebar: All Inputs, Tokenizer & Add Word Controls -->
+    <!-- Left Sidebar: Unified One-Page Control Deck -->
     <aside class="sidebar">
+      <!-- App Header with Custom Ujjwal Logo & Name -->
       <header class="app-header">
         <div class="logo">
-          <div class="logo-icon">🪐</div>
+          <div class="logo-icon-wrap" title="Ujjwal Monogram Emblem">
+            <!-- Custom Stylized Ujjwal SVG Logo -->
+            <svg class="ujjwal-logo-svg" width="30" height="30" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ujGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4f46e5" />
+                  <stop offset="50%" stop-color="#818cf8" />
+                  <stop offset="100%" stop-color="#c084fc" />
+                </linearGradient>
+              </defs>
+              <!-- Modern U Monogram with orbital semantic nodes -->
+              <path d="M12 11V25C12 31.6274 17.3726 37 24 37C30.6274 37 36 31.6274 36 25V11" stroke="url(#ujGrad)" stroke-width="4.5" stroke-linecap="round" />
+              <circle cx="12" cy="11" r="4.5" fill="#6366f1" />
+              <circle cx="36" cy="11" r="4.5" fill="#c084fc" />
+              <circle cx="24" cy="37" r="3.5" fill="#f472b6" />
+              <circle cx="24" cy="22" r="3" fill="#818cf8" />
+              <line x1="24" y1="22" x2="24" y2="34" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="2 2" />
+            </svg>
+          </div>
           <div class="logo-text">
-            <h1>TokenSphere 3D</h1>
-            <p>Interactive Tokenizer & Embedding Space</p>
+            <h1>UJJWAL</h1>
+            <p>3D Semantic & Tokenizer Studio</p>
           </div>
         </div>
       </header>
 
-      <div class="scroll-area">
+      <!-- Section Navigation Pills (Quick Scroll in One Page) -->
+      <nav class="section-nav-pills">
+        <button class="nav-pill" onclick="scrollToCard('card-train')">1. Train & Vocab</button>
+        <button class="nav-pill" onclick="scrollToCard('card-encode')">2. Encode Sentence</button>
+        <button class="nav-pill" onclick="scrollToCard('card-add')">3. Add Word</button>
+        <button class="nav-pill" onclick="toggleBottomDrawer()">4. Vocab Table</button>
+      </nav>
+
+      <!-- Scrollable Deck: All Features Visible Continuously on One Page -->
+      <div class="scroll-area" id="sidebarScrollArea">
         <!-- Feature 1: Tokenizer & Corpus Learning -->
-        <section class="card">
+        <section class="card" id="card-train">
           <div class="card-header">
             <span class="step-badge">1</span>
             <h2>Train & Build Vocabulary</h2>
           </div>
-          <p class="section-desc">Provide raw text for the tokenizer to learn tokens, build vocabulary, and map co-occurrence semantics.</p>
+          <p class="section-desc">Provide raw text for the tokenizer to learn tokens, build vocabulary, and map co-occurrence semantics into 3D space.</p>
           
           <div class="corpus-presets">
             <label>Load Preset:</label>
@@ -1126,7 +1216,7 @@
         </section>
 
         <!-- Feature 1.2: Encode Sentence -->
-        <section class="card">
+        <section class="card" id="card-encode">
           <div class="card-header">
             <span class="step-badge">2</span>
             <h2>Encode Sentence</h2>
@@ -1156,7 +1246,7 @@
         </section>
 
         <!-- Feature 3: Add New Word with Target Similarity -->
-        <section class="card card-accent">
+        <section class="card card-accent" id="card-add">
           <div class="card-header">
             <span class="step-badge">3</span>
             <h2>Add Word with Same Similarity</h2>
@@ -1211,7 +1301,7 @@
           <div class="hud-title-box">
             <span class="live-dot"></span>
             <div>
-              <span class="hud-title">3D Semantic Similarity Space</span>
+              <span class="hud-title">UJJWAL 3D Semantic Space</span>
               <div class="hud-subtitle">Spatial proximity denotes high cosine similarity &bull; Small word nodes</div>
             </div>
           </div>
@@ -1325,11 +1415,10 @@
     </main>
   </div>
 
-  <!-- Inline Application Logic (Complete & Self-Contained) -->
+  <!-- Inline Application Logic -->
   <script>
     /**
-     * TokenSphere 3D: Unified Application on index.html
-     * Features: Tokenizer, 3D Vector Space with High-Visibility Grid, Small Word Nodes, and Similarity Insertion
+     * UJJWAL: One-Page Website Application Logic
      */
 
     // ================= State Management =================
@@ -1416,6 +1505,22 @@ Wild wolves protect the green nature pack and animal forest habitat.`
       vocabTableBody: document.getElementById('vocabTableBody'),
       vocabSearchInput: document.getElementById('vocabSearchInput')
     };
+
+    // Smooth scroll to card in one-page view
+    function scrollToCard(id) {
+      const card = document.getElementById(id);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.classList.add('highlighted');
+        setTimeout(() => card.classList.remove('highlighted'), 1200);
+      }
+    }
+
+    function toggleBottomDrawer() {
+      elements.bottomDrawer.classList.toggle('collapsed');
+      const isCollapsed = elements.bottomDrawer.classList.contains('collapsed');
+      elements.drawerArrow.textContent = isCollapsed ? '▲ Show Table' : '▼ Hide Table';
+    }
 
     // ================= Tokenizer Core =================
     class Tokenizer {
@@ -1647,7 +1752,6 @@ Wild wolves protect the green nature pack and animal forest habitat.`
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xeef2f7);
-        // Distant gentle fog ensuring grids and nodes stay 100% crisp and highly visible
         this.scene.fog = new THREE.Fog(0xeef2f7, 120, 360);
 
         this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
@@ -1680,8 +1784,6 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         this.scene.add(warmLight);
 
         this.createBackgroundDust();
-
-        // Build HIGH-VISIBILITY 3D Grid & Coordinate System
         this.create3DGridSystem();
 
         window.addEventListener('resize', () => this.onWindowResize());
@@ -1711,22 +1813,17 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         this.scene.add(dust);
       }
 
-      /**
-       * Highly visible 3D Grid System with sharp contrasting lines
-       */
       create3DGridSystem() {
         this.gridGroup = new THREE.Group();
 
         // 1. High-contrast Ground Grid (XZ plane at y = -22)
-        // Center lines: 0x4338ca (rich indigo), Grid lines: 0x64748b (darker, highly visible slate)
         const groundGrid = new THREE.GridHelper(80, 40, 0x4338ca, 0x64748b);
         groundGrid.position.y = -22;
         groundGrid.material.transparent = true;
-        groundGrid.material.opacity = 0.85; // High visibility
+        groundGrid.material.opacity = 0.85;
         this.gridGroup.add(groundGrid);
 
-        // 2. Equatorial Reference Grid (XZ plane at origin y = 0)
-        // Helps immediately identify node vertical heights
+        // 2. Equatorial Reference Grid (XZ plane at y = 0)
         const originGrid = new THREE.GridHelper(70, 28, 0x6366f1, 0x94a3b8);
         originGrid.position.y = 0;
         originGrid.material.transparent = true;
@@ -1738,7 +1835,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         axes.renderOrder = 2;
         this.gridGroup.add(axes);
 
-        // 4. Volumetric Bounding Coordinate Box (defines spatial volume)
+        // 4. Volumetric Bounding Box
         const boxGeo = new THREE.BoxGeometry(52, 44, 52);
         const wireGeo = new THREE.WireframeGeometry(boxGeo);
         const cage = new THREE.LineSegments(wireGeo, new THREE.LineBasicMaterial({
@@ -1754,7 +1851,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         const originMesh = new THREE.Mesh(originGeo, originMat);
         this.gridGroup.add(originMesh);
 
-        // 6. 3D Dimension Axis Badges
+        // 6. Dimension Badges
         const makeAxisLabel = (txt, pos, color) => {
           const cvs = document.createElement('canvas');
           cvs.width = 160; cvs.height = 48;
@@ -1787,16 +1884,12 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         this.scene.add(this.gridGroup);
       }
 
-      /**
-       * SMALL SIZE Word Text Sprite (Crisp & Compact)
-       */
       makeSmallTextSprite(text, isCustom = false) {
         const canvas = document.createElement('canvas');
         canvas.width = 160;
         canvas.height = 46;
         const ctx = canvas.getContext('2d');
 
-        // Compact white rounded badge with pastel border
         ctx.fillStyle = isCustom ? '#fdf2f8' : '#ffffff';
         ctx.strokeStyle = isCustom ? '#ec4899' : '#6366f1';
         ctx.lineWidth = 2;
@@ -1816,7 +1909,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         ctx.fill();
         ctx.stroke();
 
-        ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+        ctx.font = 'bold 15px "Raleway", sans-serif';
         ctx.fillStyle = isCustom ? '#be185d' : '#0f172a';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1830,19 +1923,14 @@ Wild wolves protect the green nature pack and animal forest habitat.`
           depthWrite: false
         });
         const sprite = new THREE.Sprite(spriteMaterial);
-        // Scaled to compact small size (2.6, 0.74, 1)
         sprite.scale.set(2.6, 0.74, 1);
         sprite.visible = AppState.showLabels;
         return sprite;
       }
 
-      /**
-       * Render Vocabulary with SMALL Word Nodes
-       */
       renderVocab(vocabMap) {
         this.clearNodesAndLinks();
 
-        // Small base sphere geometry (radius 0.45 instead of 1.0)
         const sphereGeo = new THREE.SphereGeometry(0.45, 20, 20);
 
         vocabMap.forEach((entry, word) => {
@@ -1861,11 +1949,9 @@ Wild wolves protect the green nature pack and animal forest habitat.`
           mesh.position.set(x, y, z);
           mesh.userData = { word, ...entry };
 
-          // Small refined scale factor: 0.75 to 1.3
           const scale = Math.min(1.3, Math.max(0.75, 0.75 + Math.log2(entry.freq || 1) * 0.2));
           mesh.scale.set(scale, scale, scale);
 
-          // Small text sprite placed right above node
           const sprite = this.makeSmallTextSprite(word, isCustom);
           sprite.position.set(x, y + (scale * 0.5) + 0.85, z);
 
@@ -1878,9 +1964,6 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         this.updateSimilarityLinks();
       }
 
-      /**
-       * Render High-Visibility Similarity Links
-       */
       updateSimilarityLinks() {
         this.links.forEach(l => this.scene.remove(l));
         this.links = [];
@@ -1907,7 +1990,6 @@ Wild wolves protect the green nature pack and animal forest habitat.`
               const alpha = (sim - threshold) / (1 - threshold + 0.001);
               const isSelectedLink = AppState.selectedWord && (w1 === AppState.selectedWord || w2 === AppState.selectedWord);
 
-              // High-visibility chord colors
               const material = new THREE.LineBasicMaterial({
                 color: isSelectedLink ? 0xf59e0b : 0x6366f1,
                 transparent: true,
@@ -2291,7 +2373,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
           </td>
           <td>${entry.freq}</td>
           <td><code style="font-family: var(--font-mono); color: var(--accent-lilac-deep); font-size: 11px;">[${entry.coords.join(', ')}]</code></td>
-          <td style="font-weight: 600;">${topNeighbor}</td>
+          <td style="font-weight: 700;">${topNeighbor}</td>
           <td><button class="action-btn-sm" data-word="${word}">Focus 3D</button></td>
         `;
 
@@ -2321,6 +2403,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
 
     // ================= Event Wire-ups =================
     function initEvents() {
+      // Corpus Presets
       document.querySelectorAll('.btn-preset').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
@@ -2383,11 +2466,7 @@ Wild wolves protect the green nature pack and animal forest habitat.`
         elements.inspectorPanel.classList.add('hidden');
       });
 
-      elements.drawerToggle.addEventListener('click', () => {
-        elements.bottomDrawer.classList.toggle('collapsed');
-        const isCollapsed = elements.bottomDrawer.classList.contains('collapsed');
-        elements.drawerArrow.textContent = isCollapsed ? '▲ Show Table' : '▼ Hide Table';
-      });
+      elements.drawerToggle.addEventListener('click', toggleBottomDrawer);
 
       elements.vocabSearchInput.addEventListener('input', () => {
         renderVocabTable();
