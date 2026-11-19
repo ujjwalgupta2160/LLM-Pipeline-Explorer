@@ -2,6 +2,8 @@
 
 > **Interactive Tokenizer, 3D Semantic Vector Space & Word Similarity Studio**  
 > Built as a self-contained web application in a single file (`index.html`) styled in a **Slideshow presentation deck** with **Raleway** typography and the **60-30-10 Pastel & Pale** design system.
+> llmpipline.vercel.app
+
 
 ---
 
